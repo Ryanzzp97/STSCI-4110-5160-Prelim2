@@ -63,3 +63,29 @@ heatmap(cor_matrix)
 pairs(data_no_na)
 ```
 
+```{r}
+# smoker modle fitting
+data$smoker[data$smoker == 2] <- 0
+# 1. 使用没有 NA 的数据来训练模型
+model <- glm(smoker ~ gender + educ + age, data = na.omit(data), family = binomial)
+
+# 2. 在包含 NA 的数据上进行预测
+data_with_na <- data
+data_with_na$predicted_smoker <- predict(model, newdata = data_with_na, type = "response")
+
+# 3. 将预测概率转换为二分类结果
+data_with_na$predicted_smoker <- ifelse(data_with_na$predicted_smoker >= 0.5, 1, 0)
+
+# 4. 将有 NA 的数据中 'smoker' 列的值替换为预测值
+data_with_na$smoker[is.na(data_with_na$smoker)] <- data_with_na$predicted_smoker[is.na(data_with_na$smoker)]
+
+# 检查匹配的行数
+matching_rows <- sum(data_with_na$smoker == data$smoker, na.rm = TRUE)
+
+# 计算匹配的比例
+match_ratio <- matching_rows / nrow(data)
+
+cat("Match Ratio:", match_ratio, "\n")
+
+```
+
