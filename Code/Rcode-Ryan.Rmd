@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Data Analyze
 ```{r}
 # Load the CSV file
-data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/final_cardiac_data.csv")
+data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
 
 # Data Overview
 head(data)
@@ -37,5 +37,29 @@ hist(data$sleep.hrs)
 hist(data$diabetes)
 hist(data$smoker)
 hist(data$bmi)
+```
+
+```{r}
+# Analyz the smoker data individual
+smoker_data <- data$smoker
+# Tell the percentage for each category
+table(smoker_data, useNA = "ifany")
+# It's not a good idea to drop the columns with NA, since it takes almost 10% of data. According to the handout, we have another category, called "9-Don't Know", which is exactly the meaning of NA in this column.
+smoker_data[is.na(smoker_data)] <- 9
+```
+
+```{r}
+length(unique(data$seqn))
+length(unique(data$X))
+length(unique(rownames(data)))
+```
+
+```{r}
+# Remove all na value, and find the relation between each variable
+data <- data[, !(names(data) %in% c("X", "seqn"))]
+data_no_na <- na.omit(data)
+cor_matrix <- cor(data_no_na)
+heatmap(cor_matrix)
+pairs(data_no_na)
 ```
 
