@@ -1,0 +1,41 @@
+---
+title: "STSCI5160 - Prelim 2"
+author: "Ryan Zhou"
+date: "2023-11-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Analyze
+```{r}
+# Load the CSV file
+data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/final_cardiac_data.csv")
+
+# Data Overview
+head(data)
+str(data)
+
+# Find all NA value
+data[!complete.cases(data), ]
+
+# Find column with NA
+columns_with_na <- colSums(is.na(data)) > 0; columns_with_na
+```
+
+Quesiton 1:
+how to deal with all those missing value
+
+```{r}
+hist(data$gender)
+hist(data$age)
+hist(data$ethnic1)
+hist(data$educ)
+hist(data$sleep.hrs)
+hist(data$diabetes)
+hist(data$smoker)
+hist(data$bmi)
+```
+
