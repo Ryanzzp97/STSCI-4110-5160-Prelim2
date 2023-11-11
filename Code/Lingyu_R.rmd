@@ -1,0 +1,35 @@
+Predicted：
+
+```{R}
+df<-read.csv("..\\Handout\\final_cardiac_data.csv")
+```
+
+```{r}
+df$diabetes[df$diabetes == 3] <- 1
+df$diabetes[df$diabetes == 9] <- NaN
+df$diabetes[df$diabetes == 2] <- 0
+df_f<-na.omit(df)
+df_f
+```
+
+
+```{R}
+#df_f$diabetes_binary <- ifelse(df_f$diabetes == 1, 1, 0)
+
+#diab_pr<-glm(diabetes_binary~ educ + gender, data=df_f, family=binomial)
+```
+
+```{r}
+diab_pr<-glm(diabetes~ educ + gender, data=df_f, family=binomial)
+```
+
+```{r}
+rows_with_na <- is.na(df$diabetes)
+predicted_probabilities <- predict(diab_pr, newdata = df[rows_with_na, ], type = "response")
+df$diabetes[rows_with_na] <- ifelse(predicted_probabilities > 0.5, 1, 0)
+```
+
+```{r}
+df
+```
+
