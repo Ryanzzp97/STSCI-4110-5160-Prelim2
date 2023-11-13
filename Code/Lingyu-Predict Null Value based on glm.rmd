@@ -1,26 +1,51 @@
-Predicted：
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Predicted：
+
+## Read in dataset:
 
 ```{R}
 df<-read.csv("..\\Handout\\final_cardiac_data.csv")
 ```
 
+## Describe `df$diabetes`:
 ```{r}
-df$diabetes[df$diabetes == 3] <- 1
-df$diabetes[df$diabetes == 9] <- NaN
-df$diabetes[df$diabetes == 2] <- 0
+summary(df$diabetes)
+```
+```{r}
+hist(df$diabetes)
+table(df$diabetes,useNA = "ifany")
+```
+
+## Cleaning1: Categorize into 0,1, and NaN
+
+```{r}
+df$diabetes[df$diabetes == 3] <- 1 # Treat "border line" as "yes", because border line is only a little away from "having diabetes" but far away from "not having diabetes"
+df$diabetes[df$diabetes == 9] <- NaN # Regard Don't know as NaN, which will be processed later.
+df$diabetes[df$diabetes == 2] <- 0 # turn 2 into 0, which not only turns data to correct format of data for logistic regression but also more intuitive.
 df_f<-na.omit(df)
-df_f
+# df_f
 ```
 
-
-```{R}
-#df_f$diabetes_binary <- ifelse(df_f$diabetes == 1, 1, 0)
-
-#diab_pr<-glm(diabetes_binary~ educ + gender, data=df_f, family=binomial)
-```
+## Fit prediction model:
 
 ```{r}
 diab_pr<-glm(diabetes~ educ + gender, data=df_f, family=binomial)
+```
+
+```{r}
+summary(diab_pr)
+```
+
+## Predict values based on other non-missing value:
+```{r}
+table(df$educ,useNA = "ifany")
+```
+```{r}
+table(df$gender,useNA = "ifany")
 ```
 
 ```{r}
@@ -30,6 +55,5 @@ df$diabetes[rows_with_na] <- ifelse(predicted_probabilities > 0.5, 1, 0)
 ```
 
 ```{r}
-df
+#df
 ```
-
