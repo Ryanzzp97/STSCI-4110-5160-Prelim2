@@ -1,0 +1,111 @@
+---
+title: "Rcode-Chang"
+author: "Chang Chen"
+date: "11/11/2023"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load the CSV file
+data <- read.csv("~/Documents/2023F/BTRY_4110/4110-prelim2/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
+
+# Data Overview
+head(data)
+```
+
+
+
+```{r}
+data1 <- data[, !(names(data) %in% c("X", "seqn"))]
+summary(data1)
+```
+
+```{r}
+data_no_na <- na.omit(data1)
+cor_matrix <- cor(data_no_na)
+cor_matrix
+```
+
+
+Sleep Hour
+```{r}
+summary(data$sleep.hrs)
+```
+
+```{r}
+hist(data$sleep.hrs)
+```
+
+```{r}
+sleep <- cut(data$sleep.hrs, breaks = c(seq(0, 14, 2)), labels = c("1-2", "3-4", "5-6", "7-8", "9-10", "11-12", "13-14"))
+
+table(sleep)
+```
+
+
+```{r}
+data[is.na(data$sleep.hrs), ]
+```
+
+```{r}
+sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data1)
+summary(sleep_fit)
+```
+
+```{r}
+sleep_fit1 <- lm(sleep.hrs ~ gender+age, data1)
+summary(sleep_fit1)
+```
+
+Evaluate Model Performance
+```{r}
+# Predicted values from the model
+predicted_sleep <- predict(sleep_fit1, newdata = data_no_na)
+
+# Mean Absolute Error (MAE)
+mae <- mean(abs(data_no_na$sleep.hrs - predicted_sleep))
+
+# Mean Squared Error (MSE)
+mse <- mean((data_no_na$sleep.hrs - predicted_sleep)^2)
+
+# Root Mean Squared Error (RMSE)
+rmse <- sqrt(mse)
+
+# R-squared (R²)
+rsquared <- 1 - (sum((data_no_na$sleep.hrs - predicted_sleep)^2) / sum((data_no_na$sleep.hrs - mean(data_no_na$sleep.hrs))^2))
+
+# Print or inspect the metrics
+cat("MAE:", mae, "\n")
+cat("MSE:", mse, "\n")
+cat("RMSE:", rmse, "\n")
+cat("R-squared:", rsquared, "\n")
+
+```
+
+
+```{r}
+# Find rows with missing values
+rows_with_na <- is.na(data1$sleep.hrs)
+
+# Select the rows with missing values
+data1_missing <- data1[rows_with_na, ]
+
+# Use the linear regression model to predict 'sleep.hrs'
+predicted_values <- predict(sleep_fit1, newdata = data1_missing)
+
+# Replace the missing values with the predicted values in the original data frame
+data1$sleep.hrs[rows_with_na] <- predicted_values
+```
+
+```{r}
+sum(is.na(data1$sleep.hrs))
+```
+
+```{r}
+summary(data1$sleep.hrs)
+```
+
