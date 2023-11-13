@@ -1,0 +1,146 @@
+---
+title: "STSCI5160 - Prelim 2"
+author: "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"
+date: "2023-11-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Library Imports
+```{R}
+library(tidyverse)
+```
+
+# Data Analyze
+```{r}
+# Load the CSV file
+data <- read.csv("final_cardiac_data.csv")
+data_clean = read.csv("final_cardiac_data.csv")
+# Data Overview
+head(data)
+str(data)
+
+# Find all NA value
+data[!complete.cases(data), ]
+
+# Find column with NA
+columns_with_na <- colSums(is.na(data)) > 0; columns_with_na
+```
+
+Question 1:
+how to deal with all those missing value
+
+```{r}
+hist(data$gender)
+hist(data$age)
+hist(data$ethnic1)
+hist(data$educ)
+hist(data$sleep.hrs)
+hist(data$diabetes)
+hist(data$smoker)
+hist(data$bmi)
+```
+
+### Handling BMI Missing Values
+
+```{R}
+data <- select(data, -c("X", "seqn"))
+
+BMI_NA = sum(is.na(data$bmi)) # 46 missing values
+length(data$bmi)
+BMI_perc_NA = round((sum(is.na(data$bmi))/length(data$bmi))*100,2)
+# only 46/1910 (~2%) of the data in the bmi column is missing
+hist(data$bmi)
+```
+
+Upon preliminary exploration of the data, there are 46 missing values. This accounts for 2% of the data in the BMI column.
+
+There seem to be outliers in the BMI and a heavy right skew for the distribution of this data. Using something like mean imputation to replace the missing values may not be the best way to represent the data. We will use median imputation instead to replace the 2% of values that are missing. 
+
+```{R}
+# median imputation
+data_clean$bmi <- ifelse(is.na(data$bmi), median(data$bmi), data$bmi)
+hist(data_clean$bmi, col = "lightblue", main = "BMI Distribution", xlab = "BMI")
+```
+
+```{R}
+summary(data)
+```
+```{R}
+# Remove all na value, and find the relation between each variable
+data <- data[, !(names(data) %in% c("X", "seqn"))]
+data_no_na <- na.omit(data)
+cor_matrix <- cor(data_no_na)
+heatmap(cor_matrix)
+pairs(data_no_na)
+```
+
+```{R}
+## code for model to fill in missing values (for ryan )
+bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data = na.omit(data))
+summary(bmi_model) # R^2 = 0.01365
+# educ and age are insignificant predictors, so we drop them from the model
+bmi_model = lm(bmi ~ gender + ethnic1, data = na.omit(data))
+summary(bmi_model) 
+
+# Find rows with missing values
+rows_with_na <- is.na(data$bmi)
+# Select the rows with missing values
+data_missing <- data[rows_with_na, ]
+# Use the linear regression model to predict 'bmi'
+predicted_values <- predict(bmi_model, newdata = data_missing)
+# Replace the missing values with the predicted values in the original data frame
+data$bmi[rows_with_na] <- predicted_values
+```
+
+
+
+
+```{R}
+## EXTRA -- WORK IN PROGRESS
+ggplot(data_clean, aes(x = bmi, group = factor(event))) +
+  geom_boxplot() +
+  ggtitle("BMI Distribution by Cardiac Arrest") +
+  xlab("BMI") +
+  ylab("Cardiac Event")
+```
+
+
+--- WORK IN PROGRESS ---
+
+## Description of characteristics of subjects and written description
+
+```{R}
+table(data$gender)
+```
+```{R}
+table(data$age)
+```
+
+```{R}
+prop.table(table(data$event))
+```
+
+According to the above results 57.54% of the respondents did not 
+
+```{R}
+table(data$gender)
+```
+
+
+```{R}
+table(data$gender)
+```
+
+```{R}
+table(data$gender)
+```
+
+
+
+
+
+
