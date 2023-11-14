@@ -1,3 +1,5 @@
+library(tidyverse)
+
 # Load data from CSV file
 data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
 # Data Overview
@@ -26,10 +28,18 @@ table(data$gender)
 data$gender <- as.factor(data$gender)
 # Age
 hist(data$age, labels = T)
-data$age <- cut(data$age, breaks = seq(20, 80, by = 5), include.lowest = TRUE, right = TRUE, labels = c("20-25", "26-30", "31-35", "36-40", "41-45", "46-50", "51-55", "56-60", "61-65", "66-70", "71-75", "76-80"))
+#data$age <- cut(data$age, breaks = seq(20, 80, by = 5), include.lowest = TRUE, right = TRUE, labels = c("20-25", "26-30", "31-35", "36-40", "41-45", "46-50", "51-55", "56-60", "61-65", "66-70", "71-75", "76-80"))
 # ethnic1
 table(data$ethnic1)
-data$ethnic1 <- as.factor(data$ethnic1)
+data <- data %>%
+  mutate(ethnic1 = case_when(
+    ethnic1 == 1 ~ "White",
+    ethnic1 == 2 ~ "Other",
+    ethnic1 == 3 ~ "White",
+    ethnic1 == 4 ~ "Black",
+    ethnic1 == 5 ~ "Other",
+    TRUE ~ as.character(ethnic1)
+  ))
 # educ
 table(data$educ)
 # Since educ = 9 means Don't know, it's hard to assign value and with only one record. Remove the record
@@ -136,3 +146,10 @@ data$bmi[rows_with_na] <- median(data_no_na$bmi)
 # Check Result
 sum(is.na(data$bmi))
 summary(data$bmi)
+
+# In general test
+test_fit_model <- glm(event ~ age + gender + ethnic1 + educ + sleep.hrs + diabetes + smoker + bmi, data = data, family=binomial)
+summary(test_fit_model)
+# Exact choice
+test_fit_model1 <- glm(event ~ age + ethnic1 + diabetes + bmi, data = data, family=binomial)
+summary(test_fit_model1)
