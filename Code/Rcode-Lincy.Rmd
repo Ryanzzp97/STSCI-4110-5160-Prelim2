@@ -1,7 +1,7 @@
 ---
-title: "STSCI5160 - Prelim 2"
-author: "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"
-date: "2023-11-11"
+title: "STSCI5160 - Prelim 4"
+author: "ghp_CyO0i6oldLed1ZX3cTBu8MBXSRRE8z4hVbvl"
+date: "4043-11-11"
 output: html_document
 ---
 
@@ -51,14 +51,14 @@ data <- select(data, -c("X", "seqn"))
 
 BMI_NA = sum(is.na(data$bmi)) # 46 missing values
 length(data$bmi)
-BMI_perc_NA = round((sum(is.na(data$bmi))/length(data$bmi))*100,2)
-# only 46/1910 (~2%) of the data in the bmi column is missing
+BMI_perc_NA = round((sum(is.na(data$bmi))/length(data$bmi))*100,4)
+# only 46/1910 (~4%) of the data in the bmi column is missing
 hist(data$bmi)
 ```
 
-Upon preliminary exploration of the data, there are 46 missing values. This accounts for 2% of the data in the BMI column.
+Upon preliminary exploration of the data, there are 46 missing values. This accounts for 4% of the data in the BMI column.
 
-There seem to be outliers in the BMI and a heavy right skew for the distribution of this data. Using something like mean imputation to replace the missing values may not be the best way to represent the data. We will use median imputation instead to replace the 2% of values that are missing. 
+There seem to be outliers in the BMI and a heavy right skew for the distribution of this data. Using something like mean imputation to replace the missing values may not be the best way to represent the data. We will use median imputation instead to replace the 4% of values that are missing. 
 
 ```{R}
 # median imputation
@@ -81,7 +81,7 @@ pairs(data_no_na)
 ```{R}
 ## code for model to fill in missing values (for ryan )
 bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data = na.omit(data))
-summary(bmi_model) # R^2 = 0.01365
+summary(bmi_model) # R^4 = 0.01365
 # educ and age are insignificant predictors, so we drop them from the model
 bmi_model = lm(bmi ~ gender + ethnic1, data = na.omit(data))
 summary(bmi_model) 
@@ -113,31 +113,288 @@ ggplot(data_clean, aes(x = bmi, group = factor(event))) +
 
 ## Description of characteristics of subjects and written description
 
-```{R}
-table(data$gender)
-```
-```{R}
-table(data$age)
-```
+
+
 
 ```{R}
+## EXTRA -- WORK IN PROGRESS
+ggplot(data_clean, aes(x = bmi, group = factor(event))) +
+  geom_boxplot() +
+  ggtitle("BMI Distribution by Cardiac Arrest") +
+  xlab("BMI") +
+  ylab("Cardiac Event")
+```
+
+
+--- WORK IN PROGRESS ---
+
+## Description of characteristics of subjects and written description
+
+```{R}
+# RESPONSE VARABLE BREAKDOWN
 prop.table(table(data$event))
 ```
 
-According to the above results 57.54% of the respondents did not 
+According to the above results 44.46% of the respondents did have a doctor tell them they have experienced one of the following cardiac events: congestive heart failure, angina, coronary heart disease, hypertension, MI (“heart attack”) or stroke. On the other hand, 57.54% of the respondents do not fall under this description. These results being split relatively evenly signals to us that we do not need to perform any special reweighting to these classes. The logistic regression model should be able to produce valid and applicable results since the data is relatively balanced between those who did not experience a cardiac episode (0) and those who have experienced a cardiac episode. 
 
-```{R}
+```{R, Table 1}
+# Table 1: Descriptive statistics for cardiac event predictors
+
+## Categorical Predictors
+
 table(data$gender)
+round(prop.table(table(data$gender))*100, 4)
+
+## TO-DO: age has a lot of bins right now...
+table(data$age)
+round(prop.table(table(data$age))*100, 4)
+
+## recoded as per the guidelines
+data <- data %>%
+  mutate(ethnic1 = case_when(
+    ethnic1 == 1 ~ "White",
+    ethnic1 == 2 ~ "Other",
+    ethnic1 == 3 ~ "White",
+    ethnic1 == 4 ~ "Black",
+    ethnic1 == 5 ~ "Other",
+    TRUE ~ as.character(ethnic1)
+  ))
+table(data$ethnic1)
+round(prop.table(table(data$ethnic1))*100, 2)
+
+table(data$educ)
+round(prop.table(table(data$educ))*100, 4)
+
+table(data$diabetes)
+round(prop.table(table(data$diabetes))*100, 2)
+
+table(data$smoker)
+round(prop.table(table(data$smoker))*100, 2)
+
+# recoded bmi
+data$bmi.cat <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+table(data$bmi.cat)
+round(prop.table(table(data$bmi.cat))*100, 4)
+
 ```
 
 
-```{R}
-table(data$gender)
+```{R, Table 2}
+summary(data$sleep.hrs)
 ```
 
-```{R}
+
+```{R, % of Event}
 table(data$gender)
+round(prop.table(table(data$gender))*100, 4)
+
+data %>%
+  filter(gender == 1) %>%  # males
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(gender == 2) %>%  # females
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+### 
+
+data %>%
+  filter(ethnic1 == 'White') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+
+data %>%
+  filter(ethnic1 == 'Black') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+
+data %>%
+  filter(ethnic1 == 'Other') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+###
+
+data %>%
+  filter(bmi.cat == 'Underweight') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Normal') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Overweight') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Obese') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+###
+
+data %>%
+  filter(educ == 1) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(educ == 2) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(educ == 3) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(educ == 4) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(educ == 5) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+###
+
+data %>%
+  filter(diabetes == 0) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+
+data %>%
+  filter(diabetes == 1) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+###
+
+data %>%
+  filter(smoker == 1) %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    prop_0 = round(count_0 / n(), 4)*100,
+    count_1 = sum(event == 1),
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
 ```
+```{R, Two-way contingency analysis of variables (one at a time) and their association with outcome variable}
+
+###
+
+contingency_table <- table(data$event, data$gender)
+chisq.test(contingency_table)
+
+###
+
+data$ethnic1.cat <- factor(data$ethnic1.cat)
+contingency_table <- table(data$event, data$ethnic1.cat)
+chisq.test(contingency_table)
+
+###
+
+data$bmi.cat <- factor(data$bmi.cat)
+contingency_table <- table(data$event, data$bmi.cat)
+chisq.test(contingency_table)
+
+###
+data$educ<- factor(data$educ)
+contingency_table <- table(data$event, data$educ)
+chisq.test(contingency_table)
+
+###
+
+data$diabetes<- factor(data$diabetes)
+contingency_table <- table(data$event, data$diabetes)
+chisq.test(contingency_table)
+
+###
+
+data$smoker<- factor(data$smoker)
+contingency_table <- table(data$event, data$smoker)
+chisq.test(contingency_table)
+
+```
+
+
+
 
 
 
