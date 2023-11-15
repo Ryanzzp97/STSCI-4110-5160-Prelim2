@@ -1,0 +1,201 @@
+---
+title: "Description of Subjects"
+author: "Ryan Zhou"
+date: "2023-11-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Description of Subjects
+```{r}
+data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
+# Remove unique identification column
+data <- data[, !(names(data) %in% c("X", "seqn"))]
+summary(data)
+```
+
+## Categorical Data
+
+- Response: event
+```{r}
+table(data$event)
+```
+
+- gender
+Assign all female to 0, and keep male be 1. So, now we have, 0-female and 1-male.
+```{r}
+data$gender[data$gender == 2] <- 0
+mosaicplot(table(data$gender, data$event), color=c("blue", "red"), main="Mosaic Plot for Event vs Gender", xlab = 'Gender', ylab = 'Event')
+```
+
+- ethnic1
+Except Non-Hispanic black be black and Non-Hispanic white be white, we assign all other categories be the other.
+```{r}
+data <- data %>%
+  mutate(ethnic1 = case_when(
+    ethnic1 == 1 ~ "Other",
+    ethnic1 == 2 ~ "Other",
+    ethnic1 == 3 ~ "White",
+    ethnic1 == 4 ~ "Black",
+    ethnic1 == 5 ~ "Other",
+    TRUE ~ as.character(ethnic1)
+  ))
+mosaicplot(table(data$ethnic1, data$event), color=c("blue", "red"), main="Mosaic Plot for Event vs Ethnic", xlab = 'Ethnic', ylab = 'Event')
+```
+- educ
+- diabetes
+- smoker
+NA value replacement. For the NA value for smoker, we use gender, edu, and age be the predictor to form a logistic regression to predict the value.
+```{r}
+# 3. smoker
+data_no_na <- na.omit(data)
+table(data$smoker)
+# For Categorical response, first Categorize the result to (0-No smoke; 1-smoke)
+# turn 2 into 0, which not only turns data to correct format of data for logistic regression but also more intuitive.
+data$smoker[data$smoker == 2] <- 0
+smoke_pr <- glm(smoker ~ gender + educ + age, data = data, family = binomial)
+# Model evaluation
+#summary(smoke_pr)
+#data_no_na$smoker[data_no_na$smoker == 2] <- 0
+#predicted_smoker <- ifelse(predict(smoke_pr, newdata = data_no_na) >= 0.5, 1, 0)
+#mean(data_no_na$smoker == predicted_smoker)
+# Missing value replace
+rows_with_na <- is.na(data$smoker)
+predicted_probabilities <- predict(smoke_pr, newdata = data[rows_with_na, ], type = "response")
+data$smoker[rows_with_na] <- ifelse(predicted_probabilities >= 0.5, 1, 0)
+# Check Result
+sum(is.na(data$smoker))
+summary(data$smoker)
+```
+Plot the data structure
+Here we have, 0-no smoke in past 5 years and 1-smoked in past 5 years
+```{r}
+mosaicplot(table(data$smoker, data$event), color=c("blue", "red"), main="Mosaic Plot for Event vs Smoker", xlab = 'Smoker', ylab = 'Event')
+```
+
+
+## Numerical Data
+
+- age
+```{r}
+hist(data$age)
+age_model <- glm(event ~ age, data = data, family = binomial, )
+summary(age_model)
+```
+
+- sleep.hrs
+NA value replacement.
+```{r}
+# According to the correlation, use the highest possible predictors
+sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data)
+summary(sleep_fit)
+# Based on first try, use the most significant predictors
+sleep_fit1 <- lm(sleep.hrs ~ gender+ethnic1, data)
+summary(sleep_fit1)
+# Evaluate Model Performance
+# Predicted values from the model
+#predicted_sleep <- predict(sleep_fit1, newdata = data_no_na)
+# Mean Absolute Error (MAE)
+#mae <- mean(abs(data_no_na$sleep.hrs - predicted_sleep)); mae
+# Mean Squared Error (MSE)
+#mse <- mean((data_no_na$sleep.hrs - predicted_sleep)^2); mse
+# Root Mean Squared Error (RMSE)
+#rmse <- sqrt(mse); rmse
+# R-squared (R²)
+#rsquared <- 1 - (sum((data_no_na$sleep.hrs - predicted_sleep)^2) / sum((data_no_na$sleep.hrs - mean(data_no_na$sleep.hrs))^2)); rsquared
+# Replace the missing value using the predict model
+# Find rows with missing values
+rows_with_na <- is.na(data$sleep.hrs)
+# Select the rows with missing values
+data_sleep_missing <- data[rows_with_na, ]
+# Replace the missing values with the predicted value by linear regression model
+data$sleep.hrs[rows_with_na] <- predict(sleep_fit1, newdata = data_sleep_missing)
+# Check Result
+sum(is.na(data$sleep.hrs))
+summary(data$sleep.hrs)
+```
+
+```{r}
+hist(data$sleep.hrs)
+sleep_model <- glm(event ~ sleep.hrs, data = data, family = binomial)
+summary(sleep_model)
+```
+
+
+- bmi
+```{r}
+data$bmi.cat <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+table(data$bmi.cat)
+round(prop.table(table(data$bmi.cat))*100, 4)
+data %>%
+  filter(bmi.cat == 'Underweight') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Normal') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Overweight') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+
+data %>%
+  filter(bmi.cat == 'Obese') %>%  
+  summarise(
+    count_0 = sum(event == 0),
+    count_1 = sum(event == 1),
+    prop_0 = round(count_0 / n(), 4)*100,
+    prop_1 = round(count_1 / n(), 4)*100
+  )
+```
+
+NA value replacement. Due to the model performances terrible, we choice the median value to replace the NA value.
+```{r}
+# According to the correlation, use the highest possible predictors
+bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data)
+summary(bmi_model)
+# Based on first try, use the most significant predictors
+bmi_model1 = lm(bmi ~ age + gender + ethnic1, data)
+summary(bmi_model1)
+# Evaluate Model Performance
+# Predicted values from the model
+predicted_bmi <- predict(bmi_model1, newdata = data_no_na)
+# Mean Absolute Error (MAE)
+mae <- mean(abs(data_no_na$bmi - predicted_bmi)); mae
+# Mean Squared Error (MSE)
+mse <- mean((data_no_na$bmi - predicted_bmi)^2); mse
+# Root Mean Squared Error (RMSE)
+rmse <- sqrt(mse); rmse
+# R-squared (R²)
+rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); rsquared
+# Have terrible result in model, so we decided to use the median value to replace the missing value
+rows_with_na <- is.na(data$bmi)
+data$bmi[rows_with_na] <- median(data_no_na$bmi)
+# Check Result
+sum(is.na(data$bmi))
+summary(data$bmi)
+```
+
+```{r}
+hist(data$bmi)
+bmi_model <- glm(event ~ bmi, data = data, family = binomial)
+summary(bmi_model)
+```
