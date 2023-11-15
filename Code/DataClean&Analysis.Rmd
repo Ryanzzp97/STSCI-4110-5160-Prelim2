@@ -167,10 +167,15 @@ data %>%
   )
 ```
 
+```{r}
+mosaicplot(table(data$bmi.cat, data$event), color=c("blue", "red"), main="Mosaic Plot for Event vs Smoker", xlab = 'Smoker', ylab = 'Event')
+```
+
+
 NA value replacement. Due to the model performances terrible, we choice the median value to replace the NA value.
 ```{r}
 # According to the correlation, use the highest possible predictors
-bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data)
+bmi_model = lm(bmi ~ gender + ethnic1, data)
 summary(bmi_model)
 # Based on first try, use the most significant predictors
 bmi_model1 = lm(bmi ~ age + gender + ethnic1, data)
