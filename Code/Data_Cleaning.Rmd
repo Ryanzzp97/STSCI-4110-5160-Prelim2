@@ -148,8 +148,11 @@ CMHtest(diabete_tab)
 
 # Give up multinomial logistic regression, drop all NaN in column `diabetes`:
 data<-subset(data, !is.na(diabetes))
-table(data$diabetes,useNA = "ifany")
 
+data$diabetes[data_no_na$diabetes == 2] <- 0 
+data$diabetes[data_no_na$diabetes == 1] <- 2
+data$diabetes[data_no_na$diabetes == 3] <- 1
+table(data$diabetes,useNA = "ifany")
 ```
 
 ## 3. Smoker
@@ -213,7 +216,7 @@ summary(data$bmi)
 
 ## Complete all data-cleaning:
 ```{r}
-data$diabetes<-as.factor(data$diabetes)
+#data$diabetes<-as.factor(data$diabetes) #treat diabetes as numeric
 data$gender<-as.factor(data$gender)
 data$ethnic1<-as.factor(data$ethnic1)
 data$educ<-as.factor(data$educ)
