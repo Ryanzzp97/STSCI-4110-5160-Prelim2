@@ -1,0 +1,342 @@
+---
+title: "Data_Cleaning"
+author: "Chang Chen"
+date: "11/14/2023"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load the CSV file
+data_old <- read.csv("../Handout/final_cardiac_data.csv")
+
+# Data Overview
+head(data_old)
+```
+
+```{r}
+# Remove identifier columns
+data <- data_old[, !(names(data_old) %in% c("X", "seqn"))]
+
+# Run summary statistics to get overview
+summary(data)
+```
+
+## Correlation
+```{r}
+# Find the correlation between each predictor
+cor_matrix <- cor(na.omit(data)); cor_matrix
+```
+
+```{r}
+# Use heat map to visualize correlation matrix 
+heatmap(cor_matrix)
+```
+
+## Precise data analysis and process
+```{r}
+# Precise data analysis and process
+
+# Event
+table(data$event)
+data$event <- as.factor(data$event)
+
+# Gender
+table(data$gender)
+data$gender <- as.factor(data$gender)
+
+# Age
+hist(data$age, labels = T)
+
+# ethnic1
+library(dplyr)
+table(data$ethnic1)
+data <- data %>%
+  mutate(ethnic1 = case_when(
+    ethnic1 == 1 ~ "Other",
+    ethnic1 == 2 ~ "Other",
+    ethnic1 == 3 ~ "White",
+    ethnic1 == 4 ~ "Black",
+    ethnic1 == 5 ~ "Other",
+    TRUE ~ as.character(ethnic1)
+  ))
+
+# educ
+table(data$educ)
+# Since educ = 9 means Don't know, it's hard to assign value and with only one record. Remove the record
+data <- data[data$educ != 9, ]
+data$educ <- as.factor(data$educ)
+
+```
+
+## N/A Data Processing
+```{r}
+# Use linear regression or logistic regression to predict the value of the NA
+# Only keep records without N/A value to do the predict
+data_no_na <- na.omit(data)
+```
+
+
+## 1. Sleep Hours
+```{r}
+# According to the correlation, use the highest possible predictors
+sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data)
+summary(sleep_fit)
+```
+
+```{r}
+# Based on first try, use the most significant predictors
+sleep_fit1 <- lm(sleep.hrs ~ gender+ethnic1, data)
+summary(sleep_fit1)
+```
+
+```{r}
+# Evaluate Model Performance
+# Predicted values from the model
+predicted_sleep <- predict(sleep_fit1, newdata = data_no_na)
+
+# R-squared (R²); low R^2 values, so regression model does not perform well. Thus, we decide to replace all NAs with meidan value.
+rsquared <- 1 - (sum((data_no_na$sleep.hrs - predicted_sleep)^2) / sum((data_no_na$sleep.hrs - mean(data_no_na$sleep.hrs))^2)); rsquared
+```
+
+```{r}
+# Replace the missing value using the predict model
+# Find rows with missing values
+sleep_rows_with_na <- is.na(data$sleep.hrs)
+data$sleep.hrs[sleep_rows_with_na] <- median(data_no_na$sleep.hrs)
+
+# Check Result
+sum(is.na(data$sleep.hrs))
+summary(data$sleep.hrs)
+```
+
+
+## 2. Diabetes
+```{r}
+library("vcdExtra")
+table(data$diabetes)
+# Change Don't know as NaN, which will be processed later.
+data$diabetes[data$diabetes == 9] <- NaN
+
+diabete_tab <- table(data$event, data$diabetes)
+spineplot(t(diabete_tab), main = "Diabetes Status and Cardiac Event", 
+          xlab="Diabetes Status", ylab="Cardiac Event", col=c("red","blue"))
+
+# Run trend data
+CMHtest(diabete_tab)
+
+# Results shows that there is a linear association, so keep borderline category
+```
+
+
+```{r}
+# Need to run logistic regression to predict diabetes status for the NaN
+# data_no_na$diabetes[data_no_na$diabetes == 3] <- 1 
+# data_no_na$diabetes[data_no_na$diabetes == 2] <- 0 
+# predicted_diabetes <- ifelse(predict(diab_pr, newdata = data_no_na) >= 0.5, 1, 0)
+# mean(data_no_na$diabetes == predicted_diabetes)
+# # Missing value replace
+# rows_with_na <- is.na(data$diabetes)
+# predicted_probabilities <- predict(diab_pr, newdata = data[rows_with_na, ], type = "response")
+# data$diabetes[rows_with_na] <- ifelse(predicted_probabilities >= 0.5, 1, 0)
+# # Check Result
+# sum(is.na(data$diabetes))
+# summary(data$diabetes)
+
+# Give up multinomial logistic regression, drop all NaN in column `diabetes`:
+data<-subset(data, !is.na(diabetes))
+table(data$diabetes,useNA = "ifany")
+
+```
+
+## 3. Smoker
+```{r}
+table(data$smoker)
+# For Categorical response, first Categorize the result to (0-No smoke; 1-smoke)
+# turn 2 into 0, which not only turns data to correct format of data for logistic regression but also more intuitive.
+data$smoker[data$smoker == 2] <- 0
+smoke_pr <- glm(smoker ~ gender + educ + age, data = data, family = binomial)
+# Model evaluation
+summary(smoke_pr)
+data_no_na$smoker[data_no_na$smoker == 2] <- 0
+predicted_smoker <- ifelse(predict(smoke_pr, newdata = data_no_na) >= 0.5, 1, 0)
+mean(data_no_na$smoker == predicted_smoker)
+```
+
+```{r}
+# Missing value replace
+rows_with_na <- is.na(data$smoker)
+predicted_probabilities <- predict(smoke_pr, newdata = data[rows_with_na, ], type = "response")
+data$smoker[rows_with_na] <- ifelse(predicted_probabilities >= 0.5, 1, 0)
+# Check Result
+sum(is.na(data$smoker))
+summary(data$smoker)
+```
+
+
+## 4. BMI
+```{r}
+# According to the correlation, use the highest possible predictors
+bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data)
+summary(bmi_model)
+# Based on first try, use the most significant predictors
+bmi_model1 = lm(bmi ~ gender + ethnic1, data)
+summary(bmi_model1)
+```
+
+
+```{r}
+# Evaluate Model Performance
+# Predicted values from the model
+
+# R-squared (R²)
+# rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); # rsquared
+```
+
+
+```{r}
+# Have terrible result in model, so we decided to use the median value to replace the missing value
+rows_with_na <- is.na(data$bmi)
+data$bmi[rows_with_na] <- median(data_no_na$bmi)
+data$bmi <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+```
+
+
+```{r}
+# Check Result
+sum(is.na(data$bmi))
+summary(data$bmi)
+```
+
+## Complete all data-cleaning:
+```{r}
+data$diabetes<-as.factor(data$diabetes)
+data$gender<-as.factor(data$gender)
+data$ethnic1<-as.factor(data$ethnic1)
+data$educ<-as.factor(data$educ)
+data$smoker<-as.factor(data$smoker)
+data$bmi<-as.factor(data$bmi)
+anyNA(data)
+```
+
+## Interaction plot:
+```{r}
+library(ggplot2)
+
+# interaction.plot(data$diabetes, data$smoker, response = as.numeric(data$event), trace.label = "smoker", fun=mean)
+catv<-c("gender","diabetes","smoker","ethnic1","educ") # categorical
+vars<-colnames(data)[!colnames(data)=="event"] # everything except response var.
+
+for (i in catv){
+  for (j in vars){
+    if (i!=j){ 
+      interaction.plot(
+      x.factor = as.factor(data[[j]]),
+      trace.factor = as.factor(data[[i]]),
+      response = as.numeric(data$event), type = "l", legend = TRUE,
+      xlab=j,
+      ylab="Event",
+      trace.label = i
+    )}
+  }
+}
+```
+
+## Exploring Interaction Effect Significance Tests
+```{R, Exploring Interaction Effect Significance Tests}
+library(lmtest)
+
+predictors <- colnames(data)
+# exclude the response in our results
+predictors <- predictors[predictors != "event"]
+
+lrfunction <- function(i, j){
+  results <- data.frame(term1 = character(), term2 = character(), pvalue = numeric(), significant = character(), stringsAsFactors = FALSE)
+  significant = "no"
+  formula_str <- paste("event ~", i, "+", j, "+", i, ":", j)
+  model1 <- glm(formula_str, data = data, family = binomial)
+  formula_str <- paste("event ~", i, "+", j)
+  model2 <- glm(formula_str, data = data, family = binomial)
+  lr_test <- lrtest(model1, model2)
+  term1 <- i
+  term2 <- j
+  pvalue <- lr_test$Pr[2]
+  if (pvalue < 0.05){
+    significant = "yes"
+  }
+  results <- data.frame(term1 = term1, term2 = term2, pvalue = pvalue, significant = significant)
+  return(results)
+}
+
+
+for (i in 1:(length(predictors) - 1)) {
+  for (j in (i + 1):length(predictors)) {
+    print(mapply(lrfunction, predictors[[i]], predictors[[j]]))
+    cat("---")
+  }
+}
+```
+## Select 4 major interaction terms:
+```{r}
+par(mfrow = c(1, 1))
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+#options(repr.plot.width = 50, repr.plot.height = 20)
+
+
+interaction.plot(
+  x.factor = as.factor(data$gender),
+  trace.factor = as.factor(data$educ),
+  response = as.numeric(data$event), type = "l", legend = TRUE,
+  xlab="gender",
+  ylab="event",
+  trace.label = "educ",
+  main="p-value: 0.002665085")
+  
+interaction.plot(
+  x.factor = as.factor(data$age),
+  trace.factor = as.factor(data$ethnic1),
+  response = as.numeric(data$event), type = "l", legend = TRUE,
+  xlab="age",
+  ylab="event",
+  trace.label = "ethnic",
+  main="p-value: 0.03264694")
+  
+interaction.plot(
+x.factor = as.factor(data$ethnic1),
+trace.factor = as.factor(data$sleep.hrs),
+response = as.numeric(data$event), type = "l", legend = TRUE,
+xlab="ethnic",
+ylab="event",
+trace.label = "sleep hour",
+main="p-value: 0.04004753")
+
+interaction.plot(
+x.factor = as.factor(data$ethnic1),
+trace.factor = as.factor(data$smoker),
+response = as.numeric(data$event), type = "l", legend = TRUE,
+xlab="ethnic",
+ylab="event",
+trace.label = "smoker",
+main="p-value: 0.04341657")
+
+```
+
+## Dropping insignificant variables from the full model:
+```{r}
+library(MASS)
+drop.step <- step(full.model, direction='backward', scope=formula(full.model), trace=0)
+drop.step$anova
+```
+```{r}
+# Stepwise regression model
+# full.model <- glm(event ~.+gender*educ+age*ethnic1+ethnic1*sleep.hrs+ethnic1*smoker, data = data, family = binomial)
+full.model <- glm(event ~., data = data, family = binomial)
+step.model <- stepAIC(full.model,
+                      trace = FALSE)
+summary(step.model)
+```
+
+
