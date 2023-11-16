@@ -305,12 +305,12 @@ interaction.plot(
   main="p-value: 0.03264694")
   
 interaction.plot(
-x.factor = as.factor(data$ethnic1),
-trace.factor = as.factor(data$sleep.hrs),
+x.factor = as.factor(data$sleep.hrs),
+trace.factor = as.factor(data$ethnic1),
 response = as.numeric(data$event), type = "l", legend = TRUE,
-xlab="ethnic",
+xlab="sleep hour",
 ylab="event",
-trace.label = "sleep hour",
+trace.label = "ethnic",
 main="p-value: 0.04004753")
 
 interaction.plot(
