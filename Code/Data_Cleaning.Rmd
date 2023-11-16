@@ -339,4 +339,14 @@ step.model <- stepAIC(full.model,
 summary(step.model)
 ```
 
-
+## interaction with `sleep.hrs`:
+```{r}
+full.model2<-glm(event ~.+ethnic1*sleep.hrs+age*sleep.hrs+bmi*sleep.hrs+smoker*sleep.hrs+gender*sleep.hrs+educ*sleep.hrs+diabetes*sleep.hrs, data = data, family = binomial)
+backward.step2 <- step(full.model2, direction='backward', scope=formula(full.model2), trace=0)
+backward.step2$anova
+```
+```{r}
+step.model2 <- stepAIC(full.model2,
+                      trace = FALSE)
+summary(step.model2)
+```
