@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Load the CSV file
-data_old <- read.csv("/Applications/Lincy's Folder/Career & School/Cornell Fall 2023/ILRST 4110/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
+data_old <- read.csv("../Handout/final_cardiac_data.csv")
 
 # Data Overview
 head(data_old)
@@ -25,6 +25,7 @@ data <- data_old[, !(names(data_old) %in% c("X", "seqn"))]
 summary(data)
 ```
 
+## Correlation
 ```{r}
 # Find the correlation between each predictor
 cor_matrix <- cor(na.omit(data)); cor_matrix
@@ -35,6 +36,7 @@ cor_matrix <- cor(na.omit(data)); cor_matrix
 heatmap(cor_matrix)
 ```
 
+## Precise data analysis and process
 ```{r}
 # Precise data analysis and process
 
@@ -70,7 +72,7 @@ data$educ <- as.factor(data$educ)
 
 ```
 
-N/A Data Processing
+## N/A Data Processing
 ```{r}
 # Use linear regression or logistic regression to predict the value of the NA
 # Only keep records without N/A value to do the predict
@@ -78,7 +80,7 @@ data_no_na <- na.omit(data)
 ```
 
 
-Sleep Hours
+## 1. Sleep Hours
 ```{r}
 # According to the correlation, use the highest possible predictors
 sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data)
@@ -112,7 +114,7 @@ summary(data$sleep.hrs)
 ```
 
 
-2. Diabetes
+## 2. Diabetes
 ```{r}
 library("vcdExtra")
 table(data$diabetes)
@@ -147,9 +149,10 @@ CMHtest(diabete_tab)
 # Give up multinomial logistic regression, drop all NaN in column `diabetes`:
 data<-subset(data, !is.na(diabetes))
 table(data$diabetes,useNA = "ifany")
+
 ```
 
-3. Smoker
+## 3. Smoker
 ```{r}
 table(data$smoker)
 # For Categorical response, first Categorize the result to (0-No smoke; 1-smoke)
@@ -174,7 +177,7 @@ summary(data$smoker)
 ```
 
 
-4. BMI
+## 4. BMI
 ```{r}
 # According to the correlation, use the highest possible predictors
 bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data)
@@ -190,7 +193,7 @@ summary(bmi_model1)
 # Predicted values from the model
 
 # R-squared (R²)
-rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); rsquared
+# rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); # rsquared
 ```
 
 
@@ -198,58 +201,53 @@ rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi -
 # Have terrible result in model, so we decided to use the median value to replace the missing value
 rows_with_na <- is.na(data$bmi)
 data$bmi[rows_with_na] <- median(data_no_na$bmi)
+data$bmi <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+```
+
+
+```{r}
 # Check Result
 sum(is.na(data$bmi))
 summary(data$bmi)
 ```
+
 ## Complete all data-cleaning:
 ```{r}
+data$diabetes<-as.factor(data$diabetes)
+data$gender<-as.factor(data$gender)
+data$ethnic1<-as.factor(data$ethnic1)
+data$educ<-as.factor(data$educ)
+data$smoker<-as.factor(data$smoker)
+data$bmi<-as.factor(data$bmi)
 anyNA(data)
 ```
+
 ## Interaction plot:
 ```{r}
-# head(data,10)
-```
-
-
-```{r}
 library(ggplot2)
-choice<-colnames(data)
 
-## recoded as per the guidelines
-data$bmi <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+# interaction.plot(data$diabetes, data$smoker, response = as.numeric(data$event), trace.label = "smoker", fun=mean)
+catv<-c("gender","diabetes","smoker","ethnic1","educ") # categorical
+vars<-colnames(data)[!colnames(data)=="event"] # everything except response var.
 
-
-# choice<-c("gender","ethnic1","educ","diabetes","smoker")
-for (i in 1:(choose(length(choice),2))){
-interaction.plot(
-  x.factor = as.factor(data[[combn(choice,2)[,i][1]]]),
-  trace.factor = as.factor(data[[combn(choice,2)[,i][2]]]),
-  response = as.numeric(data$event), type = "l", legend = TRUE,
-  xlab=combn(choice,2)[,i][1],
-  ylab="Event",
-  trace.label = combn(choice,2)[,i][2]
-)
-  
-  
-# interchange xlab and ylab:
-interaction.plot(
-  x.factor = as.factor(data[[combn(choice,2)[,i][2]]]),
-  trace.factor = as.factor(data[[combn(choice,2)[,i][1]]]),
-  response = as.numeric(data$event), type = "l", legend = TRUE,
-  xlab=combn(choice,2)[,i][2],
-  ylab="Event",
-  trace.label = combn(choice,2)[,i][1]
-)
-
+for (i in catv){
+  for (j in vars){
+    if (i!=j){ 
+      interaction.plot(
+      x.factor = as.factor(data[[j]]),
+      trace.factor = as.factor(data[[i]]),
+      response = as.numeric(data$event), type = "l", legend = TRUE,
+      xlab=j,
+      ylab="Event",
+      trace.label = i
+    )}
+  }
 }
 ```
 
-
+## Exploring Interaction Effect Significance Tests
 ```{R, Exploring Interaction Effect Significance Tests}
-
-## previously excluded data cleaning
-data$bmi <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
+library(lmtest)
 
 predictors <- colnames(data)
 # exclude the response in our results
@@ -277,9 +275,53 @@ lrfunction <- function(i, j){
 for (i in 1:(length(predictors) - 1)) {
   for (j in (i + 1):length(predictors)) {
     print(mapply(lrfunction, predictors[[i]], predictors[[j]]))
-    print("---")
+    cat("---")
   }
 }
+```
+## Select 4 major interaction terms:
+```{r}
+par(mfrow = c(1, 1))
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+#options(repr.plot.width = 50, repr.plot.height = 20)
+
+
+interaction.plot(
+  x.factor = as.factor(data$gender),
+  trace.factor = as.factor(data$educ),
+  response = as.numeric(data$event), type = "l", legend = TRUE,
+  xlab="gender",
+  ylab="event",
+  trace.label = "educ",
+  main="p-value: 0.002665085")
+  
+interaction.plot(
+  x.factor = as.factor(data$age),
+  trace.factor = as.factor(data$ethnic1),
+  response = as.numeric(data$event), type = "l", legend = TRUE,
+  xlab="age",
+  ylab="event",
+  trace.label = "ethnic",
+  main="p-value: 0.03264694")
+  
+interaction.plot(
+x.factor = as.factor(data$ethnic1),
+trace.factor = as.factor(data$sleep.hrs),
+response = as.numeric(data$event), type = "l", legend = TRUE,
+xlab="ethnic",
+ylab="event",
+trace.label = "sleep hour",
+main="p-value: 0.04004753")
+
+interaction.plot(
+x.factor = as.factor(data$ethnic1),
+trace.factor = as.factor(data$smoker),
+response = as.numeric(data$event), type = "l", legend = TRUE,
+xlab="ethnic",
+ylab="event",
+trace.label = "smoker",
+main="p-value: 0.04341657")
+
 ```
 
 
