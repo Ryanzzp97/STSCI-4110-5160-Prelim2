@@ -324,5 +324,19 @@ main="p-value: 0.04341657")
 
 ```
 
+## Dropping insignificant variables from the full model:
+```{r}
+library(MASS)
+drop.step <- step(full.model, direction='backward', scope=formula(full.model), trace=0)
+drop.step$anova
+```
+```{r}
+# Stepwise regression model
+# full.model <- glm(event ~.+gender*educ+age*ethnic1+ethnic1*sleep.hrs+ethnic1*smoker, data = data, family = binomial)
+full.model <- glm(event ~., data = data, family = binomial)
+step.model <- stepAIC(full.model,
+                      trace = FALSE)
+summary(step.model)
+```
 
 
