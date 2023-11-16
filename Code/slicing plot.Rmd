@@ -1,0 +1,60 @@
+---
+title: "slicing plot"
+author: "Ryan Zhou"
+date: "2023-11-15"
+output: html_document
+---
+
+```{r}
+# Load data
+data <- read.csv("/Users/ryanzhou/Documents/Study/Cornell/2023/Course/STSCI 5160/Prelim/STSCI-4110-5160-Prelim2/Handout/final_cardiac_data.csv")
+
+data <- data[, !(names(data) %in% c("X", "seqn"))]
+data_no_na <- na.omit(data)
+sleep_rows_with_na <- is.na(data$sleep.hrs)
+data$sleep.hrs[sleep_rows_with_na] <- median(data_no_na$sleep.hrs)
+
+sleep.fac = factor(cut(data$sleep.hrs, breaks=15),labels=1:15)
+table(sleep.fac)
+```
+
+```{r}
+# Empirical probs for each category
+sleep.prob <- tapply(data$event, sleep.fac, mean)
+sleep.slice.avg <- tapply(data$sleep.hrs, sleep.fac, mean)
+sleep.elogits <- log(sleep.prob/(1-sleep.prob))
+# Run logistic regression on simulated data
+sleep.out <- glm(event ~ sleep.hrs, data = data, family = 'binomial')
+
+# Graph predicted and empirical probabilities
+plot(data$sleep.hrs, sleep.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'sleep.hrs', main='Empirical Probability for Sleep hours')
+points(sleep.slice.avg, sleep.prob, pch=16, col='blue')
+
+slepp.pred <- sleep.out$fitted.value
+sleep.logits <- log(slepp.pred/(1-slepp.pred))
+plot(data$sleep.hrs, sleep.logits, pch=16, ylab='Log-Odds', ylim=c(-1, 1), xlab = 'sleep.hrs', main='Empirical Logits for Sleep hours')
+points(sleep.slice.avg, sleep.elogits, pch=16, col='blue')
+```
+
+
+```{r}
+age.fac = factor(cut(data$age, breaks=15),labels=1:15)
+table(age.fac)
+# Empirical probs for each category
+age.prob <- tapply(data$event, age.fac, mean)
+age.slice.avg <- tapply(data$age, age.fac, mean)
+age.elogits <- log(age.prob/(1-age.prob))
+# Run logistic regression on simulated data
+age.out <- glm(event ~ age, data = data, family = 'binomial')
+
+# Graph predicted and empirical probabilities
+plot(data$age, age.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'age', main='Empirical Probability for age')
+points(age.slice.avg, age.prob, pch=16, col='blue')
+
+age.pred <- age.out$fitted.value
+age.plogits <- log(age.pred/(1-age.pred))
+plot(data$age, age.plogits, pch=16, ylab='Log-Odds', ylim=c(-3, 2), xlab = 'age', main='Empirical Logit for age')
+points(age.slice.avg, age.elogits, pch=16, col='blue')
+
+```
+
