@@ -236,7 +236,8 @@ for (i in catv){
       interaction.plot(
       x.factor = as.factor(data[[j]]),
       trace.factor = as.factor(data[[i]]),
-      response = as.numeric(data$event), type = "l", legend = TRUE,
+      response = as.numeric(as.character(data$event)), 
+      type = "l", legend = TRUE,
       xlab=j,
       ylab="Event",
       trace.label = i
@@ -289,7 +290,8 @@ par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
 interaction.plot(
   x.factor = as.factor(data$gender),
   trace.factor = as.factor(data$educ),
-  response = as.numeric(data$event), type = "l", legend = TRUE,
+  response =as.numeric(as.character(data$event))
+  , type = "l", legend = TRUE,
   xlab="gender",
   ylab="event",
   trace.label = "educ",
@@ -298,7 +300,8 @@ interaction.plot(
 interaction.plot(
   x.factor = as.factor(data$age),
   trace.factor = as.factor(data$ethnic1),
-  response = as.numeric(data$event), type = "l", legend = TRUE,
+  response = as.numeric(as.character(data$event))
+  , type = "l", legend = TRUE,
   xlab="age",
   ylab="event",
   trace.label = "ethnic",
@@ -307,7 +310,8 @@ interaction.plot(
 interaction.plot(
 x.factor = as.factor(data$sleep.hrs),
 trace.factor = as.factor(data$ethnic1),
-response = as.numeric(data$event), type = "l", legend = TRUE,
+response =as.numeric(as.character(data$event))
+, type = "l", legend = TRUE,
 xlab="sleep hour",
 ylab="event",
 trace.label = "ethnic",
@@ -316,14 +320,15 @@ main="p-value: 0.04004753")
 interaction.plot(
 x.factor = as.factor(data$ethnic1),
 trace.factor = as.factor(data$smoker),
-response = as.numeric(data$event), type = "l", legend = TRUE,
+response =as.numeric(as.character(data$event))
+
+, type = "l", legend = TRUE,
 xlab="ethnic",
 ylab="event",
 trace.label = "smoker",
 main="p-value: 0.04341657")
 
 ```
-
 ## Dropping insignificant variables from the full model:
 ```{r}
 library(MASS)
