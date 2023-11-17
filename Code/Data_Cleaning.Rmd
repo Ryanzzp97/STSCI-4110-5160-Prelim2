@@ -38,19 +38,47 @@ heatmap(cor_matrix)
 
 ## Precise data analysis and process
 ```{r}
-# Precise data analysis and process
-
 # Event
 table(data$event)
 data$event <- as.factor(data$event)
+```
 
+```{r}
 # Gender
 table(data$gender)
 data$gender <- as.factor(data$gender)
 
+gender_tab <- table(data$event, data$gender)
+spineplot(t(gender_tab), main = "Gender and Cardiac Event", 
+          xlab="Gender", ylab="Cardiac Event", col=c("red","blue"))
+```
+
+```{r}
 # Age
 hist(data$age, labels = T)
 
+# Slicing plot for age
+age.fac = factor(cut(data$age, breaks=15),labels=1:15)
+table(age.fac)
+# Empirical probs for each category
+age.prob <- tapply(data$event, age.fac, mean)
+age.slice.avg <- tapply(data$age, age.fac, mean)
+age.elogits <- log(age.prob/(1-age.prob))
+# Run logistic regression on simulated data
+age.out <- glm(event ~ age, data = data, family = 'binomial')
+
+# Graph predicted and empirical probabilities
+plot(data$age, age.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'age', main='Empirical Probability for age')
+points(age.slice.avg, age.prob, pch=16, col='blue')
+
+age.pred <- age.out$fitted.value
+age.plogits <- log(age.pred/(1-age.pred))
+plot(data$age, age.plogits, pch=16, ylab='Log-Odds', ylim=c(-3, 2), xlab = 'age', main='Empirical Logit for age')
+points(age.slice.avg, age.elogits, pch=16, col='blue')
+```
+
+
+```{r}
 # ethnic1
 library(dplyr)
 table(data$ethnic1)
@@ -64,12 +92,25 @@ data <- data %>%
     TRUE ~ as.character(ethnic1)
   ))
 
+ethnic_tab <- table(data$event, data$ethnic1)
+spineplot(t(ethnic_tab), main = "Ethnic and Cardiac Event", 
+          xlab="Ethnic", ylab="Cardiac Event", col=c("red","blue"))
+
+data$ethnic1 <- as.factor(data$ethnic1)
+```
+
+```{r}
 # educ
 table(data$educ)
 # Since educ = 9 means Don't know, it's hard to assign value and with only one record. Remove the record
 data <- data[data$educ != 9, ]
-data$educ <- as.factor(data$educ)
 
+educ_tab <- table(data$event, data$educ)
+spineplot(t(educ_tab), main = "Educ and Cardiac Event", 
+          xlab="Educ", ylab="Cardiac Event", col=c("red","blue"))
+
+CMHtest(educ_tab)
+data$educ <- as.factor(data$educ)
 ```
 
 ## N/A Data Processing
@@ -114,6 +155,45 @@ summary(data$sleep.hrs)
 ```
 
 
+Data Analysis for sleep.hrs
+```{r}
+table(data$sleep.hrs)
+# According to data distribution, we can find the numbers of observation having sleep hours less than 5 hours and the number for having sleep hours more than 9 hours is much less than that in other time. So we plan to divide the time to, less and equal to 5 hrs, 5-6 hrs, 6-7 hrs, 7-8 hrs, 8-9 hrs, and more than 9 hrs.
+data$sleep.hrs <- cut(data$sleep.hrs, breaks=c(-Inf, 5, 6, 7, 9, Inf), labels=c("<=5 hrs", "5-6 hrs", "6-7 hrs", "7-9 hrs", ">9 hrs"))
+table(data$sleep.hrs)
+
+# Data visualization
+sleep_tab <- table(data$event, data$sleep.hrs)
+spineplot(t(sleep_tab), main = "Sleep Hours and Cardiac Event", 
+          xlab="Sleep Hours", ylab="Cardiac Event", col=c("red","blue"))
+
+CMHtest(sleep_tab)
+```
+
+Slicing Plot for sleep hours
+```{r}
+sleep.fac = factor(data$sleep.hrs)
+# Empirical probs for each category
+sleep.prob <- tapply(data$event, sleep.fac, mean)
+sleep.slice.avg <- tapply(data$sleep.hrs, sleep.fac, mean)
+sleep.elogits <- log(sleep.prob/(1-sleep.prob))
+# Run logistic regression on simulated data
+sleep.out <- glm(event ~ sleep.hrs, data = data, family = 'binomial')
+
+# Graph predicted and empirical probabilities
+plot(data$sleep.hrs, sleep.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'sleep.hrs', main='Empirical Probability for Sleep hours')
+points(sleep.slice.avg, sleep.prob, pch=16, col='blue')
+
+slepp.pred <- sleep.out$fitted.value
+sleep.logits <- log(slepp.pred/(1-slepp.pred))
+plot(data$sleep.hrs, sleep.logits, pch=16, ylab='Log-Odds', ylim=c(-1, 1), xlab = 'sleep.hrs', main='Empirical Logits for Sleep hours')
+points(sleep.slice.avg, sleep.elogits, pch=16, col='blue')
+```
+Therefore, we treat the sleep hours as categorical variable.
+```{r}
+data$sleep.hrs <- as.factor(data$sleep.hrs)
+```
+
 ## 2. Diabetes
 ```{r}
 library("vcdExtra")
@@ -155,6 +235,13 @@ data$diabetes[data_no_na$diabetes == 3] <- 1
 table(data$diabetes,useNA = "ifany")
 ```
 
+```{r}
+diabete_tab <- table(data$event, data$diabetes)
+spineplot(t(diabete_tab), main = "Diabetes Status and Cardiac Event", 
+          xlab="Diabetes Status", ylab="Cardiac Event", col=c("red","blue"))
+```
+
+
 ## 3. Smoker
 ```{r}
 table(data$smoker)
@@ -174,6 +261,7 @@ mean(data_no_na$smoker == predicted_smoker)
 rows_with_na <- is.na(data$smoker)
 predicted_probabilities <- predict(smoke_pr, newdata = data[rows_with_na, ], type = "response")
 data$smoker[rows_with_na] <- ifelse(predicted_probabilities >= 0.5, 1, 0)
+data$smoker<-as.factor(data$smoker)
 # Check Result
 sum(is.na(data$smoker))
 summary(data$smoker)
@@ -204,9 +292,7 @@ summary(bmi_model1)
 # Have terrible result in model, so we decided to use the median value to replace the missing value
 rows_with_na <- is.na(data$bmi)
 data$bmi[rows_with_na] <- median(data_no_na$bmi)
-data$bmi <- cut(data$bmi, breaks=c(-Inf, 18.5, 24.9, 29.9, Inf), labels=c("Underweight","Normal","Overweight", "Obese"))
 ```
-
 
 ```{r}
 # Check Result
@@ -214,14 +300,39 @@ sum(is.na(data$bmi))
 summary(data$bmi)
 ```
 
+Data Analysis for BMI
+
+```{r}
+bmi.fac = factor(cut(data$bmi, breaks=c(-Inf, 25, 30, 35, Inf)),labels=c("<=25, 25-30, 30-35, >35"))
+table(bmi.fac)
+# Empirical probs for each category
+bmi.prob <- tapply(data$event, bmi.fac, mean)
+bmi.slice.avg <- tapply(data$bmi, bmi.fac, mean)
+bmi.elogits <- log(bmi.prob/(1-bmi.prob))
+# Run logistic regression on simulated data
+bmi.out <- glm(event ~ bmi, data = data, family = 'binomial')
+
+# Graph predicted and empirical probabilities
+plot(data$bmi, bmi.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'bmi', main='Empirical Probability for BMI')
+points(bmi.slice.avg, bmi.prob, pch=16, col='blue')
+
+bmi.pred <- bmi.out$fitted.value
+bmi.logits <- log(bmi.pred/(1-bmi.pred))
+plot(data$bmi, bmi.logits, pch=16, ylab='Log-Odds', ylim=c(-2, 2), xlab = 'bmi', main='Empirical Logits for BMI')
+points(bmi.slice.avg, bmi.elogits, pch=16, col='blue')
+```
+
+According to the slicing plot, the log-odds of bmi is strictly numerical, so we treat it numerical.
+
 ## Complete all data-cleaning:
 ```{r}
 #data$diabetes<-as.factor(data$diabetes) #treat diabetes as numeric
-data$gender<-as.factor(data$gender)
-data$ethnic1<-as.factor(data$ethnic1)
-data$educ<-as.factor(data$educ)
-data$smoker<-as.factor(data$smoker)
-data$bmi<-as.factor(data$bmi)
+#data$gender<-as.factor(data$gender) #Already Done
+#data$ethnic1<-as.factor(data$ethnic1) #Already Done
+#data$educ<-as.factor(data$educ) #Already Done
+#data$smoker<-as.factor(data$smoker) #Already Done
+#data$bmi<-as.factor(data$bmi) #treat as numeric
+summary(data)
 anyNA(data)
 ```
 
