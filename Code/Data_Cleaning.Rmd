@@ -229,9 +229,41 @@ CMHtest(diabete_tab)
 # Give up multinomial logistic regression, drop all NaN in column `diabetes`:
 data<-subset(data, !is.na(diabetes))
 
+#slicing plot(categorical)
+par(mfrow = c(1, 2), mar = c(5, 5, 2, 2) + 0.1, oma = c(0, 0, 3, 0))
+
+empirical_prob <- tapply(data$event == 1, data$diabetes, mean, na.rm = TRUE)
+
+probability_df <- data.frame(diabetes = as.factor(names(empirical_prob)),
+                              empirical_prob = as.vector(empirical_prob))
+
+stripchart(probability_df$empirical_prob ~ probability_df$diabetes,
+             vertical = TRUE,
+            main = "Treat diabetes as categorical",
+            xlab = "diabetes", ylab = "Empirical Probability",
+            cex=1.5,
+            pch = 20, col = "black")
+# From result of the graph and significant of model summary, it's better to treat diabetes as a continuous numeric variable
+
+# make `diabetes` continuous 
 data$diabetes[data_no_na$diabetes == 2] <- 0 
 data$diabetes[data_no_na$diabetes == 1] <- 2
 data$diabetes[data_no_na$diabetes == 3] <- 1
+
+# slicing plot(continuous)
+empirical_prob <- tapply(data$event == 1, data$diabetes, mean, na.rm = TRUE)
+
+probability_df <- data.frame(diabetes = as.factor(names(empirical_prob)),
+                              empirical_prob = as.vector(empirical_prob))
+
+stripchart(probability_df$empirical_prob ~ probability_df$diabetes,
+             vertical = TRUE,
+            main = "Treat diabetes as continuous",
+            xlab = "diabetes", ylab = "Empirical Probability",
+            ylim=c(0.4,0.5),cex=1.5,
+            pch = 20, col = "black")
+
+# Check if na exists
 table(data$diabetes,useNA = "ifany")
 ```
 
