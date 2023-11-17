@@ -501,3 +501,18 @@ step.model2 <- stepAIC(full.model2,
                       trace = FALSE)
 summary(step.model2)
 ```
+
+## Evaluate Full Model
+```{r}
+# Evaluate Full Model
+library(MASS)
+full.model <- glm(event ~., data = data, family = binomial)
+summary(full.model)
+
+# AIC Backward Selection
+step(full.model,direction="backward", k=2)
+
+# BIC Backward Selection
+step(full.model,direction="backward", k=log(nrow(data)), k.out=log(nrow(data)))
+```
+
