@@ -434,6 +434,7 @@ for (i in catv){
 
 ```{r}
 # Prettified table with signif. indicator:
+predictors<-c("gender" ,"age","ethnic1","educ" ,"sleep.hrs", "diabetes" ,"smoker"  ,"bmi")
 lrfunction <- function(i, j, data) {
   formula_str <- paste("event ~", i, "+", j, "+", i, ":", j)
   model1 <- glm(formula_str, data = data, family = binomial)
@@ -444,7 +445,7 @@ lrfunction <- function(i, j, data) {
   pvalue <- lr_test$Pr[2]
   significance <- ifelse(pvalue < 0.01, "**", ifelse(pvalue < 0.05, "*", ""))
 
-  result <- data.frame(term1 = i, term2 = j, pvalue = pvalue, significance = paste0(round(pvalue, 4),significance))
+  result <- data.frame(term1 = i, term2 = j, pvalue = pvalue, significance = paste0(round(pvalue, 3),significance))
   return(result)
 }
 
