@@ -10,8 +10,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+# Loading required packages
+library(dplyr)
+library(ggplot2)
+library("vcdExtra")
+library(lmtest)
+library(MASS)
+
+```
+
+**Step 1 and 2: Data Cleaning and Descriptive Statistics**
+
+```{r}
 # Load the CSV file
-data_old <- read.csv("../Handout/final_cardiac_data.csv")
+data_old <- read.csv("final_cardiac_data.csv")
 
 # Data Overview
 head(data_old)
@@ -25,10 +37,11 @@ data <- data_old[, !(names(data_old) %in% c("X", "seqn"))]
 summary(data)
 ```
 
-## Correlation
 ```{r}
 # Find the correlation between each predictor
-cor_matrix <- cor(na.omit(data)); cor_matrix
+# Use it to check for collinearity when running regression models to predict missing values
+cor_matrix <- cor(na.omit(data))
+cor_matrix
 ```
 
 ```{r}
@@ -36,30 +49,35 @@ cor_matrix <- cor(na.omit(data)); cor_matrix
 heatmap(cor_matrix)
 ```
 
-## Precise data analysis and process
+**Event**
+
 ```{r}
-# Event
 table(data$event)
 data$event <- as.factor(data$event)
 ```
 
+**Gender**
+
 ```{r}
-# Gender
 table(data$gender)
 data$gender <- as.factor(data$gender)
 
 gender_tab <- table(data$event, data$gender)
+
+# Mosaic plot for gender
 spineplot(t(gender_tab), main = "Gender and Cardiac Event", 
           xlab="Gender", ylab="Cardiac Event", col=c("red","blue"))
 ```
 
+**Age**
+
 ```{r}
-# Age
 hist(data$age, labels = T)
 
 # Slicing plot for age
 age.fac = factor(cut(data$age, breaks=15),labels=1:15)
 table(age.fac)
+
 # Empirical probs for each category
 age.prob <- tapply(data$event, age.fac, mean)
 age.slice.avg <- tapply(data$age, age.fac, mean)
@@ -77,10 +95,9 @@ plot(data$age, age.plogits, pch=16, ylab='Log-Odds', ylim=c(-3, 2), xlab = 'age'
 points(age.slice.avg, age.elogits, pch=16, col='blue')
 ```
 
+**Ethnic**
 
 ```{r}
-# ethnic1
-library(dplyr)
 table(data$ethnic1)
 data <- data %>%
   mutate(ethnic1 = case_when(
@@ -99,8 +116,9 @@ spineplot(t(ethnic_tab), main = "Ethnic and Cardiac Event",
 data$ethnic1 <- as.factor(data$ethnic1)
 ```
 
+**Educ**
+
 ```{r}
-# educ
 table(data$educ)
 # Since educ = 9 means Don't know, it's hard to assign value and with only one record. Remove the record
 data <- data[data$educ != 9, ]
@@ -113,17 +131,18 @@ CMHtest(educ_tab)
 data$educ <- as.factor(data$educ)
 ```
 
-## N/A Data Processing
+**Processing Variables with significant amount of missing values**
+
 ```{r}
-# Use linear regression or logistic regression to predict the value of the NA
 # Only keep records without N/A value to do the predict
 data_no_na <- na.omit(data)
 ```
 
+**Sleep hrs**
 
-## 1. Sleep Hours
 ```{r}
 # According to the correlation, use the highest possible predictors
+# Use linear regression or logistic regression to predict the value of the NA
 sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data)
 summary(sleep_fit)
 ```
@@ -154,50 +173,58 @@ sum(is.na(data$sleep.hrs))
 summary(data$sleep.hrs)
 ```
 
-
-Data Analysis for sleep.hrs
 ```{r}
+# Creating Slicing plot for sleeping hrs
+
+# Table to show distribution
 table(data$sleep.hrs)
-# According to data distribution, we can find the numbers of observation having sleep hours less than 5 hours and the number for having sleep hours more than 9 hours is much less than that in other time. So we plan to divide the time to, less and equal to 5 hrs, 5-6 hrs, 6-7 hrs, 7-8 hrs, 8-9 hrs, and more than 9 hrs.
+
+# According to data distribution, we can find the numbers of observation having sleep hours less than 5 hours and the number for having sleep hours more than 9 hours is much less than that in other time. So we plan to divide the time to, less and equal to 5 hrs, 5-6 hrs, 6-7 hrs, 7-9 hrs, and more than 9 hrs.
 data$sleep.hrs <- cut(data$sleep.hrs, breaks=c(-Inf, 5, 6, 7, 9, Inf), labels=c("<=5 hrs", "5-6 hrs", "6-7 hrs", "7-9 hrs", ">9 hrs"))
 table(data$sleep.hrs)
 
-# Data visualization
-sleep_tab <- table(data$event, data$sleep.hrs)
-spineplot(t(sleep_tab), main = "Sleep Hours and Cardiac Event", 
-          xlab="Sleep Hours", ylab="Cardiac Event", col=c("red","blue"))
-
-CMHtest(sleep_tab)
-```
-
-Slicing Plot for sleep hours
-```{r}
 sleep.fac = factor(data$sleep.hrs)
+
 # Empirical probs for each category
 sleep.prob <- tapply(data$event, sleep.fac, mean)
 sleep.slice.avg <- tapply(data$sleep.hrs, sleep.fac, mean)
 sleep.elogits <- log(sleep.prob/(1-sleep.prob))
+
 # Run logistic regression on simulated data
 sleep.out <- glm(event ~ sleep.hrs, data = data, family = 'binomial')
 
 # Graph predicted and empirical probabilities
-plot(data$sleep.hrs, sleep.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'sleep.hrs', main='Empirical Probability for Sleep hours')
+plot(data$sleep.hrs, sleep.out$fitted.values, ylab='Probability', ylim=c(0,1), xlab = 'sleep.hrs', main='Empirical Probability for Sleep hours', type="l")
 points(sleep.slice.avg, sleep.prob, pch=16, col='blue')
 
 slepp.pred <- sleep.out$fitted.value
 sleep.logits <- log(slepp.pred/(1-slepp.pred))
-plot(data$sleep.hrs, sleep.logits, pch=16, ylab='Log-Odds', ylim=c(-1, 1), xlab = 'sleep.hrs', main='Empirical Logits for Sleep hours')
+plot(data$sleep.hrs, sleep.logits, pch=16, ylab='Log-Odds', ylim=c(-1, 1), xlab = 'sleep.hrs', main='Empirical Logits for Sleep hours', type="l")
 points(sleep.slice.avg, sleep.elogits, pch=16, col='blue')
+
+# Slicing plot shows that different steps instead of straight line, so code sleep hrs as categorical variable.
 ```
-Therefore, we treat the sleep hours as categorical variable.
+
 ```{r}
+# Mosaic plot for sleep hrs
+sleep_tab <- table(data$event, data$sleep.hrs)
+spineplot(t(sleep_tab), main = "Sleep Hours and Cardiac Event", 
+          xlab="Sleep Hours", ylab="Cardiac Event", col=c("red","blue"))
+
+CMHtest(sleep_tab) # The results shows that sleep hrs and cardiac event have no linear association
+```
+
+```{r}
+# Convert sleep to factor
 data$sleep.hrs <- as.factor(data$sleep.hrs)
 ```
 
-## 2. Diabetes
+**Diabetes**
+
 ```{r}
-library("vcdExtra")
+# Create a table to view the distribution of data
 table(data$diabetes)
+
 # Change Don't know as NaN, which will be processed later.
 data$diabetes[data$diabetes == 9] <- NaN
 
@@ -208,60 +235,18 @@ spineplot(t(diabete_tab), main = "Diabetes Status and Cardiac Event",
 # Run trend data
 CMHtest(diabete_tab)
 
-# Results shows that there is a linear association, so keep borderline category
+# The trend test shows that there is a linear association, so keep borderline category
 ```
 
-
 ```{r}
-# Need to run logistic regression to predict diabetes status for the NaN
-# data_no_na$diabetes[data_no_na$diabetes == 3] <- 1 
-# data_no_na$diabetes[data_no_na$diabetes == 2] <- 0 
-# predicted_diabetes <- ifelse(predict(diab_pr, newdata = data_no_na) >= 0.5, 1, 0)
-# mean(data_no_na$diabetes == predicted_diabetes)
-# # Missing value replace
-# rows_with_na <- is.na(data$diabetes)
-# predicted_probabilities <- predict(diab_pr, newdata = data[rows_with_na, ], type = "response")
-# data$diabetes[rows_with_na] <- ifelse(predicted_probabilities >= 0.5, 1, 0)
-# # Check Result
-# sum(is.na(data$diabetes))
-# summary(data$diabetes)
-
-# Give up multinomial logistic regression, drop all NaN in column `diabetes`:
+# Since diabetes has three categories, it is challenging to run logistic regression to predict diabetes status for NA
+# Thus, we removed all NA
 data<-subset(data, !is.na(diabetes))
 
-#slicing plot(categorical)
-par(mfrow = c(1, 2), mar = c(5, 5, 2, 2) + 0.1, oma = c(0, 0, 3, 0))
-
-empirical_prob <- tapply(data$event == 1, data$diabetes, mean, na.rm = TRUE)
-
-probability_df <- data.frame(diabetes = as.factor(names(empirical_prob)),
-                              empirical_prob = as.vector(empirical_prob))
-
-stripchart(probability_df$empirical_prob ~ probability_df$diabetes,
-             vertical = TRUE,
-            main = "Treat diabetes as categorical",
-            xlab = "diabetes", ylab = "Empirical Probability",
-            cex=1.5,
-            pch = 20, col = "black")
-# From result of the graph and significant of model summary, it's better to treat diabetes as a continuous numeric variable
-
-# make `diabetes` continuous 
+# Recode diabete as ordinal categorical varaibles
 data$diabetes[data_no_na$diabetes == 2] <- 0 
 data$diabetes[data_no_na$diabetes == 1] <- 2
 data$diabetes[data_no_na$diabetes == 3] <- 1
-
-# slicing plot(continuous)
-empirical_prob <- tapply(data$event == 1, data$diabetes, mean, na.rm = TRUE)
-
-probability_df <- data.frame(diabetes = as.factor(names(empirical_prob)),
-                              empirical_prob = as.vector(empirical_prob))
-
-stripchart(probability_df$empirical_prob ~ probability_df$diabetes,
-             vertical = TRUE,
-            main = "Treat diabetes as continuous",
-            xlab = "diabetes", ylab = "Empirical Probability",
-            ylim=c(0.4,0.5),cex=1.5,
-            pch = 20, col = "black")
 
 # Check if na exists
 table(data$diabetes,useNA = "ifany")
@@ -273,14 +258,19 @@ spineplot(t(diabete_tab), main = "Diabetes Status and Cardiac Event",
           xlab="Diabetes Status", ylab="Cardiac Event", col=c("red","blue"))
 ```
 
+**Smoker**
 
-## 3. Smoker
 ```{r}
+# check distribution for smoker
 table(data$smoker)
+
+smoker_tab <- table(data$event, data$smoker)
+
 # For Categorical response, first Categorize the result to (0-No smoke; 1-smoke)
 # turn 2 into 0, which not only turns data to correct format of data for logistic regression but also more intuitive.
 data$smoker[data$smoker == 2] <- 0
 smoke_pr <- glm(smoker ~ gender + educ + age, data = data, family = binomial)
+
 # Model evaluation
 summary(smoke_pr)
 data_no_na$smoker[data_no_na$smoker == 2] <- 0
@@ -299,26 +289,29 @@ sum(is.na(data$smoker))
 summary(data$smoker)
 ```
 
+**BMI**
 
-## 4. BMI
 ```{r}
 # According to the correlation, use the highest possible predictors
 bmi_model = lm(bmi ~ educ + age + gender + ethnic1, data)
 summary(bmi_model)
+
 # Based on first try, use the most significant predictors
 bmi_model1 = lm(bmi ~ gender + ethnic1, data)
 summary(bmi_model1)
 ```
-
 
 ```{r}
 # Evaluate Model Performance
 # Predicted values from the model
 
 # R-squared (R²)
-# rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); # rsquared
-```
 
+predicted_bmi <- predict(bmi_model1, newdata = data_no_na)
+
+# R-squared (R²); low R^2 values, so regression model does not perform well.
+rsquared <- 1 - (sum((data_no_na$bmi - predicted_bmi)^2) / sum((data_no_na$bmi - mean(data_no_na$bmi))^2)); rsquared
+```
 
 ```{r}
 # Have terrible result in model, so we decided to use the median value to replace the missing value
@@ -332,9 +325,9 @@ sum(is.na(data$bmi))
 summary(data$bmi)
 ```
 
-Data Analysis for BMI
-
 ```{r}
+# Slicing plot for BMI
+
 bmi.fac = factor(cut(data$bmi, breaks=c(-Inf, 25, 30, 35, Inf)),labels=c("<=25, 25-30, 30-35, >35"))
 table(bmi.fac)
 # Empirical probs for each category
@@ -352,25 +345,70 @@ bmi.pred <- bmi.out$fitted.value
 bmi.logits <- log(bmi.pred/(1-bmi.pred))
 plot(data$bmi, bmi.logits, pch=16, ylab='Log-Odds', ylim=c(-2, 2), xlab = 'bmi', main='Empirical Logits for BMI')
 points(bmi.slice.avg, bmi.elogits, pch=16, col='blue')
+
+# According to the slicing plot, the log-odds of bmi is strictly numerical, so we treat it numerical.
 ```
 
-According to the slicing plot, the log-odds of bmi is strictly numerical, so we treat it numerical.
-
-## Complete all data-cleaning:
 ```{r}
-#data$diabetes<-as.factor(data$diabetes) #treat diabetes as numeric
-#data$gender<-as.factor(data$gender) #Already Done
-#data$ethnic1<-as.factor(data$ethnic1) #Already Done
-#data$educ<-as.factor(data$educ) #Already Done
-#data$smoker<-as.factor(data$smoker) #Already Done
-#data$bmi<-as.factor(data$bmi) #treat as numeric
-summary(data)
+# Confirm that there's no NA left
 anyNA(data)
 ```
 
-## Interaction plot:
+**Step 2: Descriptive Statistics**
+
 ```{r}
-library(ggplot2)
+summary(data)
+```
+
+**Step 3: Two-Way Table**
+
+```{r}
+# Chi-sq test for categorical predictors
+
+# gender
+chisq.test(gender_tab)
+
+# ethnic
+chisq.test(ethnic_tab)
+
+# sleep
+chisq.test(sleep_tab)
+
+# educ
+chisq.test(educ_tab)
+
+# diabetes
+chisq.test(diabete_tab)
+
+# smoker
+chisq.test(smoker_tab)
+
+# Gender and diabetes don't seem to be good predictors of cardiac event.
+```
+
+```{r}
+# LR test for numerical predictors
+
+# age
+glm.age.null <- glm(event ~ 1, data = data, family = binomial)
+glm.age <- glm(event ~ age, data = data, family = binomial)
+lrtest(glm.age.null, glm.age)
+
+# bmi
+glm.bmi.null <- glm(event ~ 1, data = data, family = binomial)
+glm.bmi <- glm(event ~ bmi, data = data, family = binomial)
+lrtest(glm.bmi.null, glm.bmi)
+
+# Both age and bmi are good predictors of cardiac event.
+
+```
+
+**Step 4: Consider Model Option**
+
+```{r}
+
+# Slicing plots from Step 2 shows that no transformation is needed
+# We are focusing on exploring the interaction terms in this section.
 
 # interaction.plot(data$diabetes, data$smoker, response = as.numeric(data$event), trace.label = "smoker", fun=mean)
 catv<-c("gender","diabetes","smoker","ethnic1","educ") # categorical
@@ -392,41 +430,51 @@ for (i in catv){
 }
 ```
 
-## Exploring Interaction Effect Significance Tests
-```{R, Exploring Interaction Effect Significance Tests}
-library(lmtest)
+**Exploring Interaction Effect Through LR Test**
 
-predictors <- colnames(data)
-# exclude the response in our results
-predictors <- predictors[predictors != "event"]
-
-lrfunction <- function(i, j){
-  results <- data.frame(term1 = character(), term2 = character(), pvalue = numeric(), significant = character(), stringsAsFactors = FALSE)
-  significant = "no"
+```{r}
+# Prettified table with signif. indicator:
+lrfunction <- function(i, j, data) {
   formula_str <- paste("event ~", i, "+", j, "+", i, ":", j)
   model1 <- glm(formula_str, data = data, family = binomial)
   formula_str <- paste("event ~", i, "+", j)
   model2 <- glm(formula_str, data = data, family = binomial)
   lr_test <- lrtest(model1, model2)
-  term1 <- i
-  term2 <- j
+
   pvalue <- lr_test$Pr[2]
-  if (pvalue < 0.05){
-    significant = "yes"
-  }
-  results <- data.frame(term1 = term1, term2 = term2, pvalue = pvalue, significant = significant)
-  return(results)
+  significance <- ifelse(pvalue < 0.01, "**", ifelse(pvalue < 0.05, "*", ""))
+
+  result <- data.frame(term1 = i, term2 = j, pvalue = pvalue, significance = paste0(round(pvalue, 4),significance))
+  return(result)
 }
 
+interaction_results <- data.frame(term1 = character(), term2 = character(), pvalue = numeric(), significance = character(), stringsAsFactors = FALSE)
 
-for (i in 1:(length(predictors) - 1)) {
-  for (j in (i + 1):length(predictors)) {
-    print(mapply(lrfunction, predictors[[i]], predictors[[j]]))
-    cat("---")
+for (i in 1:(length(predictors))) {
+  for (j in 1:(length(predictors))) {
+    if (i == j) {
+      pvalue <- NaN
+      significance <- ""
+    } else {
+      result <- lrfunction(predictors[[i]], predictors[[j]], data)
+      pvalue <- result$pvalue
+      significance <- result$significance
+    }
+    interaction_results <- rbind(interaction_results, data.frame(term1 = predictors[[i]], term2 = predictors[[j]], pvalue = pvalue, significance = significance))
   }
 }
+
+interaction_matrix <- reshape2::acast(interaction_results, term1 ~ term2, value.var = "significance")
+
+interaction_matrix
 ```
-## Select 4 major interaction terms:
+
+```{r}
+write.csv(interaction_matrix, ".\\interaction_result.csv", row.names=TRUE)
+```
+
+**Select 4 significant interaction terms:**
+
 ```{r}
 par(mfrow = c(1, 1))
 par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
@@ -474,45 +522,127 @@ ylab="event",
 trace.label = "smoker",
 main="p-value: 0.04341657")
 
-```
-## Dropping insignificant variables from the full model:
-```{r}
-library(MASS)
-drop.step <- step(full.model, direction='backward', scope=formula(full.model), trace=0)
-drop.step$anova
-```
-```{r}
-# Stepwise regression model
-# full.model <- glm(event ~.+gender*educ+age*ethnic1+ethnic1*sleep.hrs+ethnic1*smoker, data = data, family = binomial)
-full.model <- glm(event ~., data = data, family = binomial)
-step.model <- stepAIC(full.model,
-                      trace = FALSE)
-summary(step.model)
+# Set a higher threshold (alpha = 0.01), so only the interaction term between gender and education is significant.
 ```
 
-## interaction with `sleep.hrs`:
-```{r}
-full.model2<-glm(event ~.+ethnic1*sleep.hrs+age*sleep.hrs+bmi*sleep.hrs+smoker*sleep.hrs+gender*sleep.hrs+educ*sleep.hrs+diabetes*sleep.hrs, data = data, family = binomial)
-backward.step2 <- step(full.model2, direction='backward', scope=formula(full.model2), trace=0)
-backward.step2$anova
-```
-```{r}
-step.model2 <- stepAIC(full.model2,
-                      trace = FALSE)
-summary(step.model2)
-```
+**Step 5: Fit, Compare, Select Models**
 
-## Evaluate Full Model
 ```{r}
 # Evaluate Full Model
-library(MASS)
-full.model <- glm(event ~., data = data, family = binomial)
+full.model <- glm(event ~.-diabetes+educ*gender, data = data, family = binomial)
 summary(full.model)
 
 # AIC Backward Selection
 step(full.model,direction="backward", k=2)
+```
 
+```{r}
 # BIC Backward Selection
 step(full.model,direction="backward", k=log(nrow(data)), k.out=log(nrow(data)))
+```
+
+## Final model(`final.model`):`age`+`ethnic`+`smoker`+`bmi`:
+
+$$
+\begin{align*}\text{logit}(\pi_E)&=\ln  \left( \frac{\mathbb{P}(\text{event})}{1-\mathbb{P}(\text{event})} \right)\\&=\beta_0+ \beta_{\text{age}} \text{age}+ \beta_{\text{Ethnic:Other}} \text{Ethnic:Other} +\beta_{\text{Ethnic:White}} \text{Ethnic:White}\\&+\beta_{\text{Ethnic:White}} \text{Ethnic:White}+\beta_{\text{Smoker}} \text{Smoker} + \beta_{\text{BMI}} \text{BMI}\end{align*}
+$$\
+\
+
+**Step 6: Assess the model's overall fit**
+
+
+### ROC Curve
+```{R}
+## ROC curve:
+library(pROC)
+final.model<-glm(event~age+ethnic1+smoker+bmi,data,family=binomial)
+probs <- predict(reg, type = "response")
+
+roc <- roc(data$event, probs)
+plot(roc, print.auc = TRUE)
+```
+
+### Confusion matrix
+```{r}
+# install.packages(caret)
+library(caret)
+predicted_classes <- ifelse(probs > 0.5, 1, 0)
+confusion_matrix <- caret::confusionMatrix(factor(data$event), factor(predicted_classes))
+
+# Full results:
+# print(confusion_matrix) 
+
+# Table only:
+confusion_matrix$table
+
+```
+### Probability plot:
+```{r}
+library(ggplot2)
+library(dplyr)
+## Age+smoker
+mean_bmi <- mean(data$bmi)
+mean_age <- mean(data$age)
+
+plot_data <- expand.grid(
+  age = seq(min(data$age), max(data$age), length.out = 100),  # Adjust the length.out as needed
+  smoker = as.factor(c(0, 1)),
+  ethnic1= "Other",
+  bmi = mean_bmi
+)
+
+plot_data$predicted_prob <- predict(final.model, newdata = plot_data, type = "response")
+
+plot.as<-ggplot(plot_data, aes(x = age, y = predicted_prob, color = factor(smoker))) +
+  geom_line() +
+  labs(title = "Probability Plot (age:smoker)") +
+  scale_color_manual(values = c("blue", "red"))  
+
+## Age+ethnic
+plot_data <- expand.grid(
+  age = seq(min(data$age), max(data$age), length.out = 100), 
+  smoker = as.factor(0),
+  ethnic1= as.factor(c("Black","Other", "White" )),
+  bmi = mean_bmi
+)
+
+plot_data$predicted_prob <- predict(final.model, newdata = plot_data, type = "response")
+plot.ae<-ggplot(plot_data, aes(x = age, y = predicted_prob, color = factor(ethnic1))) +
+  geom_line() +
+  labs(title = "Probability Plot (age:ethnicity)") +
+  scale_color_manual(values = c("black", "red","blue"))  
+
+## bmi+smoker
+plot_data <- expand.grid(
+  bmi = seq(min(data$bmi), max(data$bmi), length.out = 100),  # Adjust the length.out as needed
+  smoker = as.factor(c(0, 1)),
+  ethnic1= "Other",
+  age = mean_age
+)
+
+plot_data$predicted_prob <- predict(final.model, newdata = plot_data, type = "response")
+
+plot.bs<-ggplot(plot_data, aes(x = bmi, y = predicted_prob, color = factor(smoker))) +
+  geom_line() +
+  labs(title = "Probability Plot (bmi:smoker)") +
+  scale_color_manual(values = c("blue", "red"))  
+
+## bmi+ethnic
+plot_data <- expand.grid(
+  bmi = seq(min(data$bmi), max(data$bmi), length.out = 100), 
+  smoker = as.factor(0),
+  ethnic1= as.factor(c("Black","Other", "White" )),
+  age = mean_age
+)
+
+plot_data$predicted_prob <- predict(final.model, newdata = plot_data, type = "response")
+plot.be<-ggplot(plot_data, aes(x = bmi, y = predicted_prob, color = factor(ethnic1))) +
+  geom_line() +
+  labs(title = "Probability Plot (bmi:ethnicity)") +
+  scale_color_manual(values = c("black", "red","blue"))  
+
+combined_plot_h1 <- plot.as + plot.ae
+combined_plot_h2 <-plot.bs + plot.be
+combined_plot_h1/combined_plot_h2
 ```
 
