@@ -16,6 +16,8 @@ library(ggplot2)
 library("vcdExtra")
 library(lmtest)
 library(MASS)
+library(pROC)
+library(patchwork)
 
 ```
 
@@ -23,7 +25,7 @@ library(MASS)
 
 ```{r}
 # Load the CSV file
-data_old <- read.csv("final_cardiac_data.csv")
+data_old <- read.csv("../Handout/final_cardiac_data.csv")
 
 # Data Overview
 head(data_old)
@@ -46,7 +48,7 @@ cor_matrix
 
 ```{r}
 # Use heat map to visualize correlation matrix 
-heatmap(cor_matrix)
+levelplot(cor_matrix,scale=list(x=list(rot=45)),xlab=NULL,ylab=NULL)
 ```
 
 **Event**
@@ -141,6 +143,9 @@ data_no_na <- na.omit(data)
 **Sleep hrs**
 
 ```{r}
+# Sleep distribution
+hist(data$sleep.hrs, main="Histogram for Sleep Hour", xlab="Sleep Hour")
+
 # According to the correlation, use the highest possible predictors
 # Use linear regression or logistic regression to predict the value of the NA
 sleep_fit <- lm(sleep.hrs ~ gender+age+ethnic1+educ, data)
@@ -366,24 +371,30 @@ summary(data)
 # Chi-sq test for categorical predictors
 
 # gender
+gender_tab <- table(data$event, data$gender)
 chisq.test(gender_tab)
 
 # ethnic
+ethnic_tab <- table(data$event, data$ethnic1)
 chisq.test(ethnic_tab)
 
 # sleep
+sleep_tab <- table(data$event, data$sleep.hrs)
 chisq.test(sleep_tab)
 
 # educ
+educ_tab <- table(data$event, data$educ)
 chisq.test(educ_tab)
 
 # diabetes
+diabetes_tab <- table(data$event, data$diabetes)
 chisq.test(diabete_tab)
 
 # smoker
+smoker_tab <- table(data$event, data$smoker)
 chisq.test(smoker_tab)
 
-# Gender and diabetes don't seem to be good predictors of cardiac event.
+# Only ethnic seems to be associated with cardiac event.
 ```
 
 ```{r}
@@ -530,7 +541,7 @@ main="p-value: 0.04341657")
 
 ```{r}
 # Evaluate Full Model
-full.model <- glm(event ~.-diabetes+educ*gender, data = data, family = binomial)
+full.model <- glm(event ~.+educ*gender, data = data, family = binomial)
 summary(full.model)
 
 # AIC Backward Selection
@@ -546,7 +557,7 @@ step(full.model,direction="backward", k=log(nrow(data)), k.out=log(nrow(data)))
 
 $$
 \begin{align*}\text{logit}(\pi_E)&=\ln  \left( \frac{\mathbb{P}(\text{event})}{1-\mathbb{P}(\text{event})} \right)\\&=\beta_0+ \beta_{\text{age}} \text{age}+ \beta_{\text{Ethnic:Other}} \text{Ethnic:Other} +\beta_{\text{Ethnic:White}} \text{Ethnic:White}\\&+\beta_{\text{Ethnic:White}} \text{Ethnic:White}+\beta_{\text{Smoker}} \text{Smoker} + \beta_{\text{BMI}} \text{BMI}\end{align*}
-$$\
+$$
 \
 
 **Step 6: Assess the model's overall fit**
@@ -555,9 +566,10 @@ $$\
 ### ROC Curve
 ```{R}
 ## ROC curve:
-library(pROC)
 final.model<-glm(event~age+ethnic1+smoker+bmi,data,family=binomial)
-probs <- predict(reg, type = "response")
+probs <- predict(final.model
+                 
+                 , type = "response")
 
 roc <- roc(data$event, probs)
 plot(roc, print.auc = TRUE)
@@ -579,8 +591,6 @@ confusion_matrix$table
 ```
 ### Probability plot:
 ```{r}
-library(ggplot2)
-library(dplyr)
 ## Age+smoker
 mean_bmi <- mean(data$bmi)
 mean_age <- mean(data$age)
