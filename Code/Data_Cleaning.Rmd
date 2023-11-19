@@ -18,7 +18,7 @@ library(lmtest)
 library(MASS)
 library(pROC)
 library(patchwork)
-
+library(lattice)
 ```
 
 **Step 1 and 2: Data Cleaning and Descriptive Statistics**
@@ -47,7 +47,7 @@ cor_matrix
 ```
 
 ```{r}
-# Use heat map to visualize correlation matrix 
+# Use heat map to visualize correlation matrix
 levelplot(cor_matrix,scale=list(x=list(rot=45)),xlab=NULL,ylab=NULL)
 ```
 
