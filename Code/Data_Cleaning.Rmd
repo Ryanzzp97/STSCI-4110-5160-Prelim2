@@ -1,6 +1,6 @@
 ---
 title: "Data_Cleaning"
-author: "Chang Chen"
+author: "Chang Chen, Lincy Chen, Lingyu Zhou, Ryan Zhou"
 date: "11/14/2023"
 output: pdf_document
 ---
