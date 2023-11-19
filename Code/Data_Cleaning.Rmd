@@ -555,10 +555,12 @@ step(full.model,direction="backward", k=log(nrow(data)), k.out=log(nrow(data)))
 
 ## Final model(`final.model`):`age`+`ethnic`+`smoker`+`bmi`:
 
-$$
-\begin{align*}\text{logit}(\pi_E)&=\ln  \left( \frac{\mathbb{P}(\text{event})}{1-\mathbb{P}(\text{event})} \right)\\&=\beta_0+ \beta_{\text{age}} \text{age}+ \beta_{\text{Ethnic:Other}} \text{Ethnic:Other} +\beta_{\text{Ethnic:White}} \text{Ethnic:White}\\&+\beta_{\text{Ethnic:White}} \text{Ethnic:White}+\beta_{\text{Smoker}} \text{Smoker} + \beta_{\text{BMI}} \text{BMI}\end{align*}
-$$
-\
+
+\begin{align*}
+\text{logit}(\pi_E)&=\ln  \left( \frac{\mathbb{P}(\text{event})}{1-\mathbb{P}(\text{event})} \right)\\&=\beta_0+ \beta_{\text{age}} \text{age}+ \beta_{\text{Ethnic:Other}} \text{Ethnic:Other} +\beta_{\text{Ethnic:White}} \text{Ethnic:White}\\&+\beta_{\text{Ethnic:White}} \text{Ethnic:White}+\beta_{\text{Smoker}} \text{Smoker} + \beta_{\text{BMI}} \text{BMI}
+\end{align*}
+
+
 
 **Step 6: Assess the model's overall fit**
 
